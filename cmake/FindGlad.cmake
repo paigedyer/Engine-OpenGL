@@ -1,5 +1,5 @@
 find_path(glad_INCLUDE_DIR
-    NAMES glad.h
+    NAMES glad/glad.h
     HINTS
         "${CMAKE_SOURCE_DIR}/lib/glad/include"
 )
@@ -17,13 +17,7 @@ mark_as_advanced(glad_INCLUDE_DIR)
 
 if(glad_FOUND AND NOT TARGET glad)
     # Adds an interface library to hold the include directory
-    add_library(glad INTERFACE)
-    target_include_directories(glad INTERFACE "${glad_INCLUDE_DIR}"
+    add_library(glad STATIC "${CMAKE_SOURCE_DIR}/lib/glad/src/glad.c")
+    target_include_directories(glad PUBLIC "${glad_INCLUDE_DIR}"
     )
-endif()
-
-# Export the glad_SOURCE_FILE variable
-if(glad_FOUND)
-    set(glad_SOURCE_FILE "${CMAKE_SOURCE_DIR}/lib/glad/src/glad.c" CACHE PATH "Path to glad.c source file" FORCE)
-    mark_as_advanced(glad_SOURCE_FILE)
 endif()

@@ -15,8 +15,17 @@ add_executable(GameEngine
 )
 
 target_include_directories(GameEngine PRIVATE 
-	dependencies
 	${glad_INCLUDE_DIR}
-	)
+	${GLFW3_INCLUDE_DIR}
+)
 
-target_link_libraries(GameEngine glad ${GLFW3_LIBRARY} OpenGL::GL) #Add OpenGL::GL When ready
+target_include_directories(glad PUBLIC 
+	${glad_INCLUDE_DIR}
+)
+
+target_link_libraries(GameEngine 
+	glad 
+	${GLFW3_LIBRARY} 
+	OpenGL::GL
+)
+
