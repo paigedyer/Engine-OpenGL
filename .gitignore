@@ -1,0 +1,70 @@
+# === General Build Artifacts ===
+/build/
+/bin/
+/out/
+/lib/
+/dist/
+*.o
+*.obj
+*.lo
+*.a
+*.la
+*.lib
+*.dll
+*.so
+*.dylib
+*.exe
+*.app
+
+# === CMake ===
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+# === Visual Studio ===
+*.VC.db
+*.VC.VC.opendb
+*.sdf
+*.ipch
+*.opensdf
+*.user
+*.suo
+*.vcxproj.user
+*.log
+*.tlog/
+*.lastbuildstate
+*.idb
+*.pdb
+
+# VS folders
+/.vs/
+
+# === CLion / JetBrains IDEs ===
+.idea/
+cmake-build-debug/
+cmake-build-release/
+*.iml
+
+# === VSCode ===
+.vscode/
+*.code-workspace
+
+# === Mac OS ===
+.DS_Store
+
+# === Windows ===
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === Logs and Dumps ===
+*.log
+*.dmp
+
+# === Conan / vcpkg / Other package managers (if used) ===
+.conan/
+vcpkg_installed/
+vcpkg_buildtrees/
