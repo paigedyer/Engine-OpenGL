@@ -3,12 +3,12 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <Engine.h>
+
 int main()
 {
-
-	std::cout << "Hello, Game Engine" << std::endl;
-
-	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
+	Engine newEngineInstance;
+	newEngineInstance.SetupGLFW();
+	newEngineInstance.StartRenderLoop();
 	return 0;
 }
