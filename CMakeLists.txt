@@ -34,4 +34,3 @@ target_link_libraries(GameEngine
 	${GLFW3_LIBRARY} 
 	OpenGL::GL
 )
-
