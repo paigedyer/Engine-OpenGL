@@ -6,6 +6,14 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "stb_image.h"
+
+#include <SHADER.h>
+
 #include <iostream>
 #include <string>
 
@@ -28,14 +36,26 @@ public:
     void SetupTriangle();
     unsigned int VBO;
 
+    // RECTANGLE
+    void SetupRectangle();
+    unsigned int EBO;
+
     // SHADERS
+    /*
     void SetupShaders();
     void SetupVertexShader();
     void SetupFragmentShader();
     void CreateShaderProgram();
+    */
 
     // VAO
     void CreateVertexArray();
+
+    // TEXTURES
+    void ApplyTexture();
+
+    // MATRICES
+    void CreateMatrices();
 
     // Input
     void ProcessInput(GLFWwindow *window);
@@ -80,10 +100,21 @@ public:
     "void main() {\n"
     "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);}\0";
 
-    unsigned int shaderProgram;
+    //unsigned int shaderProgram;
 
     // VAO
     unsigned int VAO;
+
+    // TEXTURES
+    unsigned int texture;
+
+    // MATRICES
+    // Model matrix
+    glm::mat4 model;
+    // View matrix
+    glm::mat4 view;
+    // Projection matrix
+    glm::mat4 projection;
 
     // Colors
     Color Red;
@@ -101,6 +132,20 @@ public:
         -0.5f, -0.5f, 0.0f,
         0.5f, -0.5f, 0.0f,
         0.0f, 0.5f, 0.0f
+    };
+
+    // RECTANGLE
+    float rectVertices[32] = {
+        // positions          // colors           // texture coords
+        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+       -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+       -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
+    };
+
+    unsigned int indices[6] = {
+        0, 1, 3, // first triangle
+        1, 2, 3  // second triangle
     };
 
 };

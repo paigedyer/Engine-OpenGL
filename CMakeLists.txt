@@ -16,6 +16,7 @@ find_package(glfw3 REQUIRED)
 add_executable(GameEngine
 	src/main.cpp
 	src/Engine.cpp
+	src/stb_image.cpp
 )
 
 target_include_directories(GameEngine PRIVATE 

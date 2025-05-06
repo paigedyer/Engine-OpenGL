@@ -1,8 +1,18 @@
 #define GLFW_INCLUDE_NONE
+#include <complex>
 #include <iostream>
 #include <string>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "stb_image.h"
+
+#include <SHADER.h>
+
 #include <Engine.h>
 
 Engine::Engine()
@@ -59,16 +69,20 @@ void Engine::framebuffer_size_callback(GLFWwindow* window, int width, int height
 {
     // Viewport adjusts to new size
     glViewport(0, 0, width, height);
-} 
+}
 
 void Engine::StartRenderLoop()
 // Called after SetupGLFW()
 {
     // Compile shaders
-    SetupShaders();
-    SetupTriangle();
-    // Create Vertex Array
+    Shader shader("../src/Shaders/shader.vs", "../src/Shaders/shader.fs");
+
+    //SetupTriangle();
+
     CreateVertexArray();
+    SetupRectangle();
+    CreateMatrices();
+    ApplyTexture();
 
     while (!glfwWindowShouldClose(window))
     {
@@ -77,13 +91,27 @@ void Engine::StartRenderLoop()
         // Input
         ProcessInput(window);
 
-        glClearColor(1.0f, 0.973f, 0.941f, 1.0f);
+        glClearColor(0.8f, 0.973f, 0.6f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        glBindTexture(GL_TEXTURE_2D, texture);
+
         // Rendering Commands
-        glUseProgram(shaderProgram); // Uses the shader for rendering calls
+        int vertexColorLocation = glGetUniformLocation(shader.ID, "color");
+        shader.Use();
+
+        // "4f" because it expects 4 float values
+        glUniform4f(vertexColorLocation, 1.0f, 0.0f, 0.0f, 1.0f); // Color to fragment shader
+        int modelLoc = glGetUniformLocation(shader.ID, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        int viewLoc = glGetUniformLocation(shader.ID, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        int projectionLoc = glGetUniformLocation(shader.ID, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        //glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glfwPollEvents();
         // Checks if any events are triggered like:
@@ -103,6 +131,10 @@ void Engine::StartRenderLoop()
         //      When rendering commands are finished -> Swap back to the front.
     }
     DestroyWindow();
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    //glDeleteProgram(shaderProgram);
+    glfwTerminate();
 
 }
 
@@ -184,6 +216,7 @@ void Engine::ChangeColor()
     }
 }
 
+/* MOVED TO SHADER.H
 // SHADERS
 void Engine::SetupShaders()
 {
@@ -251,20 +284,33 @@ void Engine::CreateShaderProgram()
         glDeleteShader(fragmentShader);
     }
 }
+*/
 
 // VAO
 void Engine::CreateVertexArray()
 {
     glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
     // Bind Vertex Array Object
     glBindVertexArray(VAO);
     // Copy vertices array in a buffer
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triVertices), triVertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(rectVertices), rectVertices, GL_STATIC_DRAW);
     // Set vertex attributes pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // color attribute
+    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    //glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 }
+
 
 // TRIANGLE
 void Engine::SetupTriangle()
@@ -275,6 +321,54 @@ void Engine::SetupTriangle()
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // Any buffer calls on the GL_ARRAY_BUFFER type will be used to config the currently bound buffer
     // Copies vertext data into the buffer's memory
     glBufferData(GL_ARRAY_BUFFER, sizeof(triVertices), triVertices, GL_STATIC_DRAW);
+}
+
+void Engine::SetupRectangle()
+{
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+}
+
+void Engine::ApplyTexture()
+{
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char *data = stbi_load("../textures/texture.jpg", &width, &height, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture" << std::endl;
+    }
+
+
+    // Free the image memory
+    stbi_image_free(data);
+}
+
+
+void Engine::CreateMatrices()
+{
+    model = glm::mat4(1.0f);
+    // Rotates the object so that it's flat
+    model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    view = glm::mat4(1.0f);
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
+    projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
 }
 
 
