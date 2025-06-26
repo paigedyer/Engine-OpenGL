@@ -32,6 +32,13 @@ public:
     void InitColors();
     void ChangeColor();
 
+    // CAMERA
+    void SetupCamera();
+    void SetCameraAngle(glm::vec3 cameraAngle);
+
+    // TIME
+    void CalculateDeltaTime();
+
     // TRIANGLE
     void SetupTriangle();
     unsigned int VBO;
@@ -39,6 +46,9 @@ public:
     // RECTANGLE
     void SetupRectangle();
     unsigned int EBO;
+
+    // CUBE
+    void SetupCube();
 
     // SHADERS
     /*
@@ -55,7 +65,7 @@ public:
     void ApplyTexture();
 
     // MATRICES
-    void CreateMatrices();
+    void CreateMatrices(Shader s);
 
     // Input
     void ProcessInput(GLFWwindow *window);
@@ -126,6 +136,21 @@ public:
     Color colorsArr[5];
     int index;
 
+    // INPUT
+    bool firstMouse = true;
+
+    // CAMERA
+    glm::vec3 cameraPos;
+    glm::vec3 cameraTarget;
+    glm::vec3 cameraDirection;
+    glm::vec3 cameraUp;
+    glm::vec3 cameraRight;
+    glm::vec3 cameraFront;
+    float yaw, pitch, lastX, lastY, fov;
+
+    // TIME
+    float deltaTime, lastFrame;
+
     // TRIANGLE
 
     float triVertices[9] = {
@@ -141,6 +166,51 @@ public:
         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
+    };
+
+    // CUBE
+    float cubeVertices[180] = {
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
     unsigned int indices[6] = {
