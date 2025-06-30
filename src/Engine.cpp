@@ -2,6 +2,7 @@
 #include <complex>
 #include <iostream>
 #include <string>
+#include <filesystem>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -10,6 +11,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "stb_image.h"
+#include "Model.h"
+#include "Mesh.h"
 
 #include <SHADER.h>
 
@@ -96,8 +99,10 @@ void Engine::framebuffer_size_callback(GLFWwindow* window, int width, int height
 
 static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
+    cout << "MOUSE MOVED" << endl;
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
+    // TODO: Figure out a better way to do this :/
     Engine* engine = static_cast<Engine*>(glfwGetWindowUserPointer(window));
 
     if (engine)
@@ -114,30 +119,7 @@ static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
         lastX = xpos;
         lastY = ypos;
 
-        // Multiply by sensitivity, without it, the movement would be too fast and too strong
-        const float sensitivity = 0.1f; // Change this value as needed
-        xoffset *= sensitivity;
-        yoffset *= sensitivity;
-
-        yaw += xoffset;
-        pitch += yoffset;
-
-        // Constraining the pitch
-        if (pitch > 89.0f)
-        {
-            pitch = 89.0f;
-        }
-        if (pitch < -89.0f)
-        {
-            pitch = -89.0f;
-        }
-
-        glm::vec3 front;
-        front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        front.y = sin(glm::radians(pitch));
-        front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        glm::vec3 camAngle = glm::normalize(front);
-        engine->SetCameraAngle(camAngle);
+        engine->SetCameraAngle(xoffset, yoffset);
     }
     else
     {
@@ -145,20 +127,14 @@ static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     }
 }
 
-
-
 void Engine::StartRenderLoop()
 // Called after SetupGLFW()
 {
+    // Flip loaded textures on y-axis
+    stbi_set_flip_vertically_on_load(true);
+
     // Compile shaders
     Shader shader("../src/Shaders/shader.vs", "../src/Shaders/shader.fs");
-
-    CreateVertexArray();
-
-    // Texture
-    ApplyTexture();
-    shader.Use();
-    shader.setInt("texture", 0);
 
     // Sets camera variable values
     SetupCamera();
@@ -166,10 +142,13 @@ void Engine::StartRenderLoop()
     // Matrices for translations
     CreateMatrices(shader);
 
+    // Set the path to the model
+    const string sPath = "../Models/backpack/backpack.obj";
+    // Load the model
+    Model aModel(sPath);
+
     // Enable depth
     glEnable(GL_DEPTH_TEST);
-    projection = glm::perspective(glm::radians(45.0f), (float)winX / (float)winY, 0.1f, 100.0f);
-    shader.setMat4("projection", projection);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -179,37 +158,39 @@ void Engine::StartRenderLoop()
         // Input
         ProcessInput(window);
 
+        // Color buffer
         glClearColor(0.8f, 0.973f, 0.6f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glBindTexture(GL_TEXTURE_2D, texture);
+        // --------- RENDERING COMMANDS ---------
 
-        // Rendering Commands
-
-        // Activate the shader
+        // enable shader
         shader.Use();
-
-        view = glm::mat4(1.0f);
-
-        // Rotate cube over time
-        // model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
-
-        float radius = 10.0f;
-        float camX = static_cast<float>(sin(glfwGetTime()) * radius);
-        float camZ = static_cast<float>(cos(glfwGetTime()) * radius);
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        projection = glm::perspective(glm::radians(45.0f), (float)winX / (float)winY, 0.1f, 100.0f);
-
+        if (camera)
+        {
+            projection = glm::perspective(glm::radians(camera->Zoom), (float)winX / (float)winY, 0.1f, 100.0f);
+            view = camera->GetViewMatrix();
+        }
+        shader.setMat4("projection", projection);
         shader.setMat4("view", view);
 
+        // Render the loaded model
         model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // put at the center
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); // Scaling the model
         shader.setMat4("model", model);
+        aModel.Draw(shader);
 
+        /* -- Unused but here for reference --
         // Render
         glBindVertexArray(VAO);
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Rotate cube over time
+        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.5f, 1.0f, 0.0f));
+        */
 
         glfwPollEvents();
         // Checks if any events are triggered like:
@@ -228,9 +209,9 @@ void Engine::StartRenderLoop()
         // + Back Buffer: Where rendering commands are drawn to.
         //      When rendering commands are finished -> Swap back to the front.
     }
+
+    // Cleanup when closing the window
     DestroyWindow();
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
     glfwTerminate();
 
 }
@@ -261,7 +242,7 @@ void Engine::DestroyWindow()
     }
 }
 
-// TIME
+//  --------- TIME  ---------
 void Engine::CalculateDeltaTime()
 {
     float currentFrame = glfwGetTime();
@@ -269,36 +250,49 @@ void Engine::CalculateDeltaTime()
     lastFrame = currentFrame;
 }
 
-// INPUT
+//  --------- INPUT ---------
 
 void Engine::ProcessInput(GLFWwindow *window)
 {
+    // CLOSE WINDOW
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     {
         std::cout << "ESCAPE" << std::endl;
         glfwSetWindowShouldClose(window, true);
     }
+    // SPACE BAR
     else if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
     {
         std::cout << "SPACE" << std::endl;
         ChangeColor();
     }
-    const float cameraSpeed = 2.5f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
-        cameraPos += cameraSpeed * cameraFront;
+        if (camera)
+        {
+            camera->ProcessKeyboard(FORWARD, deltaTime);
+        }
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
-        cameraPos -= cameraSpeed * cameraFront;
+        if (camera)
+        {
+            camera->ProcessKeyboard(BACKWARD, deltaTime);
+        }
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        if (camera)
+        {
+            camera->ProcessKeyboard(LEFT, deltaTime);
+        }
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        if (camera)
+        {
+            camera->ProcessKeyboard(RIGHT, deltaTime);
+        }
     }
         
 }
@@ -338,188 +332,19 @@ void Engine::ChangeColor()
     }
 }
 
-/* MOVED TO SHADER.H
-// SHADERS
-void Engine::SetupShaders()
-{
-    SetupVertexShader();
-    SetupFragmentShader();
-    CreateShaderProgram();
-}
-
-void Engine::SetupVertexShader()
-{
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-    // Attach source code to the shader object
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader); // Compile shader
-
-    // Check for compilation errors
-    int success;
-    char infoLog[512]; // Storage for error messages
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success); // Checks for success
-    if (!success) {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-}
-
-void Engine::SetupFragmentShader()
-{
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-
-    // Check for compilation errors
-    int success;
-    char infoLog[512];
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::FRAGMENT_SHADER\n" << infoLog << std::endl;
-    }
-}
-
-void Engine::CreateShaderProgram()
-{
-    // Creates a program and returns the ID reference
-    shaderProgram = glCreateProgram();
-
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    // Links the shaders by the corresponding/matching input and outputs
-    glLinkProgram(shaderProgram);
-
-    // Check for compilation errors
-    int success;
-    char infoLog[512];
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);\
-        std::cout << "ERROR::SHADER::PROGRAM::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    else {
-        // Delete the vertex and fragment shaders once they've been linked
-        std::cout << "Program linked successfully" << std::endl;
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
-    }
-}
-*/
-
-// VAO
-void Engine::CreateVertexArray()
-{
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    // Bind Vertex Array Object
-    glBindVertexArray(VAO);
-
-    // Copy vertices array in a buffer
-    // SHAPE TO SET UP
-    //SetupTriangle();
-    //SetupRectangle();
-    SetupCube();
-
-    // Set vertex attributes pointers
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // color attribute
-    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    //glEnableVertexAttribArray(1);
-
-    // Texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-}
-
 void Engine::SetupCamera()
 {
-    // Position
-    cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-
-    // Direction
-    cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-    cameraDirection = glm::normalize(cameraPos - cameraTarget);
-
-    // Right axis
-    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-
-    // Up axis
-    cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-    cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    // Instantiate the camera
+    camera = new Camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 }
 
-void Engine::SetCameraAngle(glm::vec3 cameraAngle)
+void Engine::SetCameraAngle(float xoff, float yoff)
 {
-    cameraFront = glm::normalize(cameraAngle);
-}
-
-// TRIANGLE
-void Engine::SetupTriangle()
-{
-
-    glGenBuffers(1, &VBO); // Generates a buffer ID
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // Any buffer calls on the GL_ARRAY_BUFFER type will be used to config the currently bound buffer
-    // Copies vertext data into the buffer's memory
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triVertices), triVertices, GL_STATIC_DRAW);
-}
-
-void Engine::SetupRectangle()
-{
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-}
-
-void Engine::SetupCube()
-{
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-}
-
-void Engine::ApplyTexture()
-{
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    // set the texture wrapping/filtering options (on the currently bound texture object)
-    // Wrapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    // Filtering
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int width, height, nrChannels;
-    // Flip the texture on the y-axis
-    stbi_set_flip_vertically_on_load(true);
-
-
-    unsigned char *data = stbi_load("../textures/texture.jpg", &width, &height, &nrChannels, 0);
-    if (data)
+    if (camera)
     {
-        // Generate Mipmaps
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+       camera->ProcessMouseMovement(xoff, yoff);
     }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-
-    // Free the image memory
-    stbi_image_free(data);
 }
 
 void Engine::CreateMatrices(Shader s)
