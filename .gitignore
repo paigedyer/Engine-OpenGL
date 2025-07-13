@@ -68,3 +68,6 @@ Desktop.ini
 .conan/
 vcpkg_installed/
 vcpkg_buildtrees/
+
+# === Note files and pseudocode ===
+TilemapEditor/pseudocode.txt

@@ -1,0 +1,73 @@
+﻿Open Grid Window
+    Show grid
+
+    Hover Mouse Cursor over
+
+Open Palette Window
+    Check if there are any tiles that should be in palette already.
+    If yes, list them with a preview of the tile.
+    Show "import new tile" button
+
+
+Create Grid
+    // Grid Dimensions
+    int rows = [# of rows]
+    int cols = [# of cols]
+    float tileSize = 1.0f;
+
+    // Colors of each tile
+    Vec3 array gridColors[# total tiles]
+
+    for each in grid Colors
+        {
+            Set color to white/default
+        }
+
+
+
+
+
+Import New Tile Pressed ->
+    Opens file explorer, select either a directory or an individual file
+        If directory selected ->
+            Tries to import all files inside.
+            For each file in directory
+            {
+                if correct type
+                    If correct pixel size
+                else
+                    Log "Could not import [filename]"
+
+            }
+        Else If single file ->
+            Check for correct file type
+            Check for correct file pixel size
+
+Click Tile from palette ->
+    if ifEraser = true
+        Set ifEraser = false
+    Make that tile and texture the "active" tile/texture
+
+Click Eraser button ->
+    Make "active" tile/texture the eraser.
+    Set isEraser = true
+
+Hover tile ->
+    if Tile selected
+        if hovered tile is already populated
+            highlight tile in red
+        else
+            fill tile with selected tile texture, reduced opacity
+    else if eraser selected
+        if hovered tile is already populated
+            validErase = true
+        else
+            do nothing
+
+Mouse button ->
+    if validErase = true
+        outline cell in yellow
+
+
+
+

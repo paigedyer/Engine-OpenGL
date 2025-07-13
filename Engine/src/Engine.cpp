@@ -134,7 +134,7 @@ void Engine::StartRenderLoop()
     stbi_set_flip_vertically_on_load(true);
 
     // Compile shaders
-    Shader shader("../src/Shaders/shader.vs", "../src/Shaders/shader.fs");
+    Shader shader("../Engine/src/Shaders/shader.vs", "../Engine/src/Shaders/shader.fs");
 
     // Sets camera variable values
     SetupCamera();
@@ -175,6 +175,15 @@ void Engine::StartRenderLoop()
         shader.setMat4("view", view);
 
         // Render the loaded model
+
+        // Create identity matrix (no transformations applied)
+        // Gets set back to identity matrix first in every iteration of the render loop
+        /*
+         * 1 0 0 0
+         * 0 1 0 0
+         * 0 0 1 0
+         * 0 0 0 1
+         **/
         model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // put at the center
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); // Scaling the model
@@ -331,6 +340,8 @@ void Engine::ChangeColor()
         index = 0;
     }
 }
+
+//  --------- CAMERA ---------
 
 void Engine::SetupCamera()
 {
