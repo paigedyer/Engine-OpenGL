@@ -3,12 +3,11 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <Engine.h>
+#include <TilemapEditor.h>
+
 
 int main()
 {
-    Engine newEngineInstance;
-    newEngineInstance.SetupGLFW();
-    newEngineInstance.StartRenderLoop();
+    TilemapEditor::OpenWindows();
     return 0;
 }

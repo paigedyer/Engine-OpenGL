@@ -30,6 +30,11 @@ add_library(engine
 		${ENGINE_SOURCE_PATH}/Mesh.cpp
 		${ENGINE_SOURCE_PATH}/Model.cpp
 		${ENGINE_SOURCE_PATH}/Camera.cpp
+		${ENGINE_SOURCE_PATH}/WindowManager.cpp
+)
+
+target_include_directories(glad PUBLIC
+		${glad_INCLUDE_DIR}
 )
 
 target_include_directories(engine PUBLIC
@@ -41,10 +46,14 @@ add_executable(TOOL_tilemap_editor
 		TilemapEditor/main.cpp
 		TilemapEditor/TilemapEditor.cpp
 )
-target_link_libraries(TOOL_tilemap_editor engine)
+target_link_libraries(TOOL_tilemap_editor
+		engine
+		glad
+		${GLFW3_LIBRARY}
+		OpenGL::GL)
 
-target_include_directories(glad PUBLIC 
-	${glad_INCLUDE_DIR}
+target_include_directories(TOOL_tilemap_editor PUBLIC
+		TilemapEditor/includes
 )
 
 # GAME ENGINE EXE - DEGBUG, TESTING, ETC.

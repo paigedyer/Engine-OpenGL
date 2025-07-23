@@ -14,7 +14,7 @@ enum Camera_Movement
 };
 
 // Default values
-const float YAW         = -90.0f;
+const float YAW         = 0.0f;
 const float PITCH       =  0.0f;
 const float SPEED       =  2.5f;
 const float SENSITIVITY =  0.1f;
@@ -41,10 +41,10 @@ public:
     float Zoom;
 
     // Constructor with vectors
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
+    Camera(glm::vec3 position = glm::vec3(0.0f, 100.0f, 0.0f),
         glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
         float yaw = YAW,
-        float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)),
+        float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, 0.0f)),
         MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
     {
         Position = position;
@@ -65,7 +65,14 @@ public:
 
     glm::mat4 GetViewMatrix()
     {
-        return glm::lookAt(Position, Position + Front, WorldUp);
+        //return glm::lookAt(Position, Position + Front, WorldUp);
+        glm::mat4 view;
+        view = glm::lookAt(
+            glm::vec3(0.0f, 10.0f, 10.0f), // Camera position
+            glm::vec3(0.0f, 0.0f, 0.0f),  // Target to look at
+            WorldUp                             // World UP
+        );
+        return view;
     }
 
     // Process input received from keyboard-like input system.
