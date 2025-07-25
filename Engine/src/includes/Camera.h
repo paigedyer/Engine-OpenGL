@@ -15,10 +15,10 @@ enum Camera_Movement
 
 // Default values
 const float YAW         = 0.0f;
-const float PITCH       =  0.0f;
+const float PITCH       = 0.0f;
 const float SPEED       =  2.5f;
 const float SENSITIVITY =  0.1f;
-const float ZOOM        =  45.0f;
+const float ZOOM        =  1.0f;
 
 class Camera
 {
@@ -68,8 +68,8 @@ public:
         //return glm::lookAt(Position, Position + Front, WorldUp);
         glm::mat4 view;
         view = glm::lookAt(
-            glm::vec3(0.0f, 10.0f, 10.0f), // Camera position
-            glm::vec3(0.0f, 0.0f, 0.0f),  // Target to look at
+             (glm::vec3(-25.0f, 60.0f, 0.0f) * 5.0f), // Camera position
+             (glm::vec3(0.0f, 0.0f, 0.0f) * 5.0f),  // Target to look at
             WorldUp                             // World UP
         );
         return view;

@@ -15,9 +15,13 @@ namespace TilemapEditor
             Grid grid = Grid();
             std::cout << grid.GetNumLines() << std::endl;
 
+            glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
+
             WindowManager::Window paletteWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "Palette");
             // Share context between the two windows, to share textures, etc.
             WindowManager::Window editorWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "Tilemap Editor");
+
+            editorWindow.SetFocused();
 
             // Send the generated grid data to the editor window
             editorWindow.ReceiveGridData(grid.GetGridData());

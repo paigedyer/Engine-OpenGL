@@ -6,6 +6,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <Camera.h>
+#include <glm/glm.hpp>
 
 #include <WindowManager.h>
 
@@ -13,7 +14,11 @@
 
 namespace WindowManager
 {
+    bool m_bMouseWheelPressed = false;
+    Window* currentWindow;
+
     static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
+    static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
     void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     {
         // Viewport adjusts to new size
@@ -26,8 +31,6 @@ namespace WindowManager
     float lastX = 0.0f;
     float lastY = 0.0f;
     float fov = 45.0f;
-
-    Window* currentWindow;
 
     void window_focus_callback(GLFWwindow* window, int focused)
     {
@@ -47,30 +50,96 @@ namespace WindowManager
 
     static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     {
-        float xpos = static_cast<float>(xposIn);
-        float ypos = static_cast<float>(yposIn);
-
-        if (firstMouse)
+        if (m_bMouseWheelPressed)
         {
+            //std::cout << xposIn << " " << yposIn << std::endl;
+            //std::cout << "MOUSE MOVED" << std::endl;
+            float xpos = static_cast<float>(xposIn);
+            float ypos = static_cast<float>(yposIn);
+            //std::cout << xpos << " " << ypos << std::endl;
+
+            if (firstMouse)
+            {
+                lastX = xpos;
+                lastY = ypos;
+                firstMouse = false;
+            }
+
+            float xoffset = xpos - lastX;
+            float yoffset = ypos - lastY;
+            //std::cout << xoffset << " " << yoffset << std::endl;
             lastX = xpos;
             lastY = ypos;
-            firstMouse = false;
+            if (currentWindow)
+            {
+                //std::cout << currentWindow->GetTitle() << " x: " << xoffset << std::endl;
+                //std::cout << currentWindow->GetTitle() << " y: " << yoffset << std::endl;
+                currentWindow->TransformScreen(xoffset, yoffset);
+            }
+            else
+            {
+                std::cout << "CURRENT WINDOW POINTER INVALID" << std::endl;
+            }
         }
+    }
 
-        float xoffset = xpos - lastX;
-        float yoffset = lastY - ypos;
-        lastX = xpos;
-        lastY = ypos;
+    static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+    {
         if (currentWindow)
         {
-            currentWindow->SetCameraAngle(xoffset, yoffset);
+            if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
+            {
+                //std::cout << "MIDDLE MOUSE PRESSED" << std::endl;
+                m_bMouseWheelPressed = true;
+            }
+            if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
+            {
+                // std::cout << "MIDDLE MOUSE RELEASED" << std::endl;
+                m_bMouseWheelPressed = false;
+                firstMouse = true;
+                currentWindow->TransformScreen(0.0f, 0.0f);
+            }
         }
-        else
-        {
-            std::cout << "CURRENT WINDOW POINTER INVALID" << std::endl;
-        }
-
     }
+
+    void Window::SetFocused()
+    {
+        glfwFocusWindow(m_window);
+    }
+
+    void Window::TransformScreen(float x, float z)
+    {
+        float scale = 0.08;
+        m_newTranslation.x += z * scale;
+        m_newTranslation.z += x * scale;
+        /*
+        if (x == 0.0f)
+        {
+            m_newTranslation.x = 0.0f;
+        }
+        if (y == 0.0f)
+        {
+            m_newTranslation.y = 0.0f;
+        }
+        if (x > 0.0f)
+        {
+            m_newTranslation.x = 2.0f;
+        }
+        if (y > 0.0f)
+        {
+            m_newTranslation.y = 1.0f;
+        }
+        if (y < 0.0f)
+        {
+            m_newTranslation.y = -1.0f;
+        }
+        if (x < 0.0f)
+        {
+            m_newTranslation.x = -2.0f;
+        }
+        */
+    }
+
 
     void CloseGLFW()
     {
@@ -84,8 +153,6 @@ namespace WindowManager
           , m_winContext(winContext)
     {
         CreateWindow();
-
-
     }
 
     bool Window::CreateWindow()
@@ -112,11 +179,16 @@ namespace WindowManager
 
         glViewport(0, 0, m_winWidth, m_winHeight);
         glDisable(GL_DEPTH_TEST);
-        glLineWidth(2.0f);
 
+        // Grid Shader program
         m_shaderPtr = new Shader("../TilemapEditor/Shaders/shader.vs", "../TilemapEditor/Shaders/shader.fs");
+        // UI shader program
+        m_uiShaderPtr = new Shader("../TilemapEditor/Shaders/ui_shader.vs", "../TilemapEditor/Shaders/ui_shader.fs");
+        m_uiShaderPtr->setVec3("chColor", glm::vec3(0.98f, 0.03f, 0.84));
 
-        //glfwSetCursorPosCallback(m_window, mouse_callback);
+        // Callback functions
+        glfwSetCursorPosCallback(m_window, mouse_callback);
+        glfwSetMouseButtonCallback(m_window, mouse_button_callback);
         glfwSetFramebufferSizeCallback(m_window, framebuffer_size_callback);
         glfwSetWindowFocusCallback(m_window, window_focus_callback);
         glfwSetWindowUserPointer(m_window, reinterpret_cast<void *>(this));
@@ -144,10 +216,28 @@ namespace WindowManager
 
         m_shaderPtr->Use();
 
+        m_model = glm::mat4(1.0f);
+        m_model = glm::scale(m_model, glm::vec3(0.5f, 1.0f, 1.0f));
+
+        m_currentTranslation += m_newTranslation;
+        std::cout << "X: " << m_currentTranslation.x << std::endl;
+        std::cout << "Z: " << m_currentTranslation.z << std::endl;
+        m_model = glm::translate(m_model, m_currentTranslation);
+        //m_model = glm::translate(m_model, (glm::vec3(-25.0f, 0.0f, -25.0f) * 5.0f)); // Confirmed good position
+        m_model = glm::rotate(m_model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
         if (m_camera)
         {
-            //m_projection = glm::ortho(glm::radians(m_camera->Zoom), (float)m_winWidth / (float)m_winHeight, 0.1f, 1000.0f);
-            m_projection = glm::perspective(glm::radians(45.0f), (float)m_winWidth / (float)m_winHeight, 0.1f, 1000.0f);
+            m_zoom = 0.08;
+            //m_projection = glm::perspective(glm::radians(45.0f), (float)m_winWidth / (float)m_winHeight, 0.1f, 1000.0f);
+            m_projection = glm::ortho(
+                (-(m_winWidth / 2.0f) * m_zoom),
+                ((m_winWidth / 2.0f) * m_zoom),
+                ((m_winHeight / 2.0f) * m_zoom),
+                (-(m_winHeight / 2.0f) * m_zoom),
+                (200.0f * 5),
+                (-200.0f * 5)
+                );
             m_view = m_camera->GetViewMatrix();
         }
         else
@@ -155,12 +245,17 @@ namespace WindowManager
             std::cout << "Camera is NULL" << std::endl;
         }
 
-        m_model = glm::mat4(1.0f);
-        m_model = glm::scale(m_model, glm::vec3(5.0f));
         SetShaderData(m_shaderPtr);
 
         // vvv Draw calls vvv
+        glLineWidth(1.0f);
         DrawGridLines();
+            // UI/HUD
+        glLineWidth(2.0f);
+        m_uiShaderPtr->Use();
+        DrawUI();
+
+        m_newTranslation = glm::vec3(0.0f);
 
         glfwSwapBuffers(m_window);
         glfwPollEvents();
@@ -262,14 +357,32 @@ namespace WindowManager
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
         glEnableVertexAttribArray(0);
 
+        // UI VAO & VBO
+
+        glGenVertexArrays(1, &crossHairVAO);
+        glGenBuffers(1, &crossHairVBO);
+
+        glBindVertexArray(crossHairVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, crossHairVBO);
+        glBufferData(GL_ARRAY_BUFFER, m_crossHairLines.size() * sizeof(glm::vec3), m_crossHairLines.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+        glEnableVertexAttribArray(0);
+
     }
 
     void Window::DrawGridLines()
     {
-        std::cout << "drawing lines..." << std::endl;
+        //std::cout << "drawing lines..." << std::endl;
         glBindVertexArray(lineVAO);
         glDrawArrays(GL_LINES, 0, m_gridData.size());
         //glBindVertexArray(0);
+    }
+
+    void Window::DrawUI()
+    {
+        glBindVertexArray(crossHairVAO);
+        glDrawArrays(GL_LINES, 0, m_crossHairLines.size());
     }
 
     void Window::SetShaderData(Shader* shader)

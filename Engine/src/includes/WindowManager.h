@@ -22,8 +22,11 @@ namespace WindowManager
             const char *title=DEFAULT_TITLE,
             GLFWwindow* winContext=NULL);
 
+        void SetFocused();
+
         void onUpdate();
         void PrepareRendering();
+        void TransformScreen(float x, float y);
 
         bool ShouldClose();
         bool IsClosed();
@@ -55,7 +58,9 @@ namespace WindowManager
         void ProcessInput();
         void CalculateDeltaTime();
         void DrawGridLines();
+        void DrawUI();
         void SetShaderData(Shader* shader);
+        glm::vec3 CalculateTranslation();
 
         unsigned int m_winWidth = DEFAULT_WINDOW_WIDTH;
         unsigned int m_winHeight = DEFAULT_WINDOW_HEIGHT;
@@ -63,26 +68,44 @@ namespace WindowManager
         const char* m_winTitle = DEFAULT_TITLE;
 
         bool m_winIsClosed = false;
+        bool m_firstFrame = true;
 
         float m_deltaTime, lastFrame = 0.0f;
 
         GLFWwindow* m_winContext = NULL;
         GLFWwindow* m_window = NULL;
 
-        // View matrix
-        glm::mat4 m_view;
-        // Projection matrix
-        glm::mat4 m_projection;
-
-        glm::mat4 m_model;
-
         Camera* m_camera;
 
+        glm::vec3 m_newTranslation = glm::vec3(0.0f,0.0f,0.0f);
+        glm::vec3 m_currentTranslation = glm::vec3(-25.0f, 0.0f, -25.0f);
+
+        // SHADER & RENDERING DATA
+            // View matrix
+        glm::mat4 m_view;
+            // Projection matrix
+        float m_zoom = 1.0f;
+        glm::mat4 m_projection;
+            // Model matrix (grid)
+        glm::mat4 m_model;
+
+            // Shader program pointers
         Shader* m_shaderPtr;
+        Shader* m_uiShaderPtr;
 
         std::vector<glm::vec3> m_gridData;
         GLuint lineVBO;
         GLuint lineVAO;
+        GLuint crossHairVAO;
+        GLuint crossHairVBO;
+
+        std::vector<glm::vec3> m_crossHairLines =
+        {
+            glm::vec3(-0.02f,  0.0f, 0.0f), // Horizontal left
+            glm::vec3( 0.02f,  0.0f, 0.0f), // Horizontal right
+            glm::vec3( 0.0f, -0.02f, 0.0f), // Vertical bottom
+            glm::vec3( 0.0f,  0.02f, 0.0f), // Vertical top
+        };
     };
 
     void CloseGLFW();

@@ -3,7 +3,7 @@
 
 #define GLFW_INCLUDE_NONE
 
-#define DEFAULT_TILE_SIZE 1.0f
+#define DEFAULT_TILE_SIZE 5.0f
 #define DEFAULT_NUM_COLS 50
 #define DEFAULT_NUM_ROWS 50
 
