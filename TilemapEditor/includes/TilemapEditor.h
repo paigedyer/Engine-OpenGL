@@ -26,13 +26,14 @@ namespace TilemapEditor
         public:
             Grid();
             void GenerateGrid();
-            std::vector<glm::vec3> GetGridData();
+            WindowManager::Window::GridData GetGridData();
             int GetNumLines();
         private:
             float m_tileSize = DEFAULT_TILE_SIZE;
             unsigned int m_numRows = DEFAULT_NUM_ROWS;
             unsigned int m_numCols = DEFAULT_NUM_COLS;
             std::vector<glm::vec3> m_gridLines;
+            WindowManager::Window::GridData m_gridData;
 
 
         };

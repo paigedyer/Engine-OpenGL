@@ -17,7 +17,7 @@ namespace TilemapEditor
 
             glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
 
-            WindowManager::Window paletteWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "Palette");
+            //WindowManager::Window paletteWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "Palette");
             // Share context between the two windows, to share textures, etc.
             WindowManager::Window editorWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "Tilemap Editor");
 
@@ -28,6 +28,20 @@ namespace TilemapEditor
             editorWindow.PrepareRendering();
 
             // RENDER LOOP ENTRY
+            while (!editorWindow.IsClosed())
+            {
+                if (editorWindow.ShouldClose()) {editorWindow.DestroyWindow();}
+                else
+                {
+                    if (editorWindow.IsCurrent())
+                    {
+                        editorWindow.onUpdate();
+                    }
+                }
+            }
+            if (editorWindow.IsClosed()) { WindowManager::CloseGLFW(); }
+
+            /* Render both palette window and editor window
             while (!paletteWindow.IsClosed() || !editorWindow.IsClosed())
             {
                 if (paletteWindow.ShouldClose()) { paletteWindow.DestroyWindow(); }
@@ -52,6 +66,7 @@ namespace TilemapEditor
             {
                 WindowManager::CloseGLFW();
             }
+            */
         }
     }
 
@@ -86,9 +101,13 @@ namespace TilemapEditor
 
     }
 
-    std::vector<glm::vec3> Grid::GetGridData()
+    WindowManager::Window::GridData Grid::GetGridData()
     {
-        return m_gridLines;
+        m_gridData.gridData = m_gridLines;
+        m_gridData.tileSize = glm::vec3(m_tileSize, 0.0f, m_tileSize);
+        m_gridData.numCols = m_numCols;
+        m_gridData.numRows = m_numRows;
+        return m_gridData;
     }
 
 }

@@ -17,16 +17,26 @@ namespace WindowManager
     class Window
     {
     public:
+        struct GridData
+        {
+            std::vector<glm::vec3> gridData;
+            glm::vec3 tileSize;
+            float numCols;
+            float numRows;
+        };
+
         Window(unsigned int width=DEFAULT_WINDOW_WIDTH,
             unsigned int height=DEFAULT_WINDOW_HEIGHT,
             const char *title=DEFAULT_TITLE,
             GLFWwindow* winContext=NULL);
 
         void SetFocused();
+        void SetFramebufferValues(int width, int height);
 
         void onUpdate();
         void PrepareRendering();
         void TransformScreen(float x, float y);
+        void ZoomScreen(float zoom);
 
         bool ShouldClose();
         bool IsClosed();
@@ -45,11 +55,12 @@ namespace WindowManager
         glm::mat4 GetProjectionMatrix();
         glm::mat4 GetViewMatrix();
 
-        void ReceiveGridData(std::vector<glm::vec3> m_gridLines);
+        void ReceiveGridData(GridData gridData);
 
         GLFWwindow* GetWindow();
 
         void DestroyWindow();
+
     private:
         bool CreateWindow();
         void Update();
@@ -60,7 +71,11 @@ namespace WindowManager
         void DrawGridLines();
         void DrawUI();
         void SetShaderData(Shader* shader);
-        glm::vec3 CalculateTranslation();
+        glm::vec3 UnProject(glm::vec3 inVec3);
+        glm::vec3 Project(glm::vec3 inVec3);
+
+        glm::vec3 m_lastScreenCoordinates = glm::vec3(0.0f);
+        glm::vec3 m_currentCoords = glm::vec3(0.0f);
 
         unsigned int m_winWidth = DEFAULT_WINDOW_WIDTH;
         unsigned int m_winHeight = DEFAULT_WINDOW_HEIGHT;
@@ -70,15 +85,29 @@ namespace WindowManager
         bool m_winIsClosed = false;
         bool m_firstFrame = true;
 
-        float m_deltaTime, lastFrame = 0.0f;
+        double m_frameRate = 60.0;
+        double m_fixedDeltaTime = 1.0 / m_frameRate;
+        double m_deltaTime, m_lastUpdate = 0.0;
+        double m_lastFrameTime = 0.0;
 
         GLFWwindow* m_winContext = NULL;
         GLFWwindow* m_window = NULL;
 
         Camera* m_camera;
 
-        glm::vec3 m_newTranslation = glm::vec3(0.0f,0.0f,0.0f);
-        glm::vec3 m_currentTranslation = glm::vec3(-25.0f, 0.0f, -25.0f);
+        // Position in grid coordinates
+        glm::vec3 m_gridOffset = glm::vec3(0.0f);
+        // For resuse of rotation and scale
+        glm::mat4 m_isoMatrix;
+        // Inverse for unprojecting screen deltas
+        glm::mat4 m_invIsoMatrix;
+
+        glm::vec3 m_worldOrigin = glm::vec3(0.0f, 0.0f, 0.0f);
+
+        glm::vec3 m_deltaScreenPos = glm::vec3(0.0f);
+        glm::vec3 m_currentScreenPos = glm::vec3(0.0f, 0.0f, 0.0f);
+
+        glm::vec3 m_singleTileSize;
 
         // SHADER & RENDERING DATA
             // View matrix
@@ -93,7 +122,7 @@ namespace WindowManager
         Shader* m_shaderPtr;
         Shader* m_uiShaderPtr;
 
-        std::vector<glm::vec3> m_gridData;
+        std::vector<glm::vec3> m_gridLines;
         GLuint lineVBO;
         GLuint lineVAO;
         GLuint crossHairVAO;

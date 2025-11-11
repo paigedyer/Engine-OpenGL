@@ -16,21 +16,25 @@ namespace WindowManager
 {
     bool m_bMouseWheelPressed = false;
     Window* currentWindow;
-
-    static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
-    static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-    void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-    {
-        // Viewport adjusts to new size
-        glViewport(0, 0, width, height);
-    }
-
     bool firstMouse = true;
     float yaw = -90.0f;
     float pitch = 0.0f;
     float lastX = 0.0f;
     float lastY = 0.0f;
     float fov = 45.0f;
+
+    static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
+    static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+
+    void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+    {
+        // Viewport adjusts to new size
+        glViewport(0, 0, width, height);
+        if (currentWindow)
+        {
+            currentWindow->SetFramebufferValues(width, height);
+        }
+    }
 
     void window_focus_callback(GLFWwindow* window, int focused)
     {
@@ -102,44 +106,47 @@ namespace WindowManager
         }
     }
 
+    static void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+    {
+        if (currentWindow)
+        {
+            float zoom = static_cast<float>(yoffset);
+            currentWindow->ZoomScreen(zoom);
+        }
+    }
+
     void Window::SetFocused()
     {
         glfwFocusWindow(m_window);
     }
 
-    void Window::TransformScreen(float x, float z)
+    void Window::SetFramebufferValues(int width, int height)
     {
-        float scale = 0.08;
-        m_newTranslation.x += z * scale;
-        m_newTranslation.z += x * scale;
-        /*
-        if (x == 0.0f)
-        {
-            m_newTranslation.x = 0.0f;
-        }
-        if (y == 0.0f)
-        {
-            m_newTranslation.y = 0.0f;
-        }
-        if (x > 0.0f)
-        {
-            m_newTranslation.x = 2.0f;
-        }
-        if (y > 0.0f)
-        {
-            m_newTranslation.y = 1.0f;
-        }
-        if (y < 0.0f)
-        {
-            m_newTranslation.y = -1.0f;
-        }
-        if (x < 0.0f)
-        {
-            m_newTranslation.x = -2.0f;
-        }
-        */
+        m_winWidth = width;
+        m_winHeight = height;
     }
 
+    void Window::TransformScreen(float x, float z)
+        // z value is either 1 or -1
+    {
+        z = -z;
+        float ndcX = 2.0f * x / m_winWidth;
+        float ndcY = 2.0f * z / m_winHeight;
+        float scale = m_zoom * 5.0f;
+
+        glm::vec3 screenDelta(ndcX * scale * 50.0f, 0.0f, ndcY * scale * 50.0f);
+
+        glm::vec3 gridDelta = glm::vec3(m_invIsoMatrix * glm::vec4(screenDelta, 0.0f));
+
+        m_gridOffset -= gridDelta;
+
+    }
+
+    void Window::ZoomScreen(float zoom)
+    {
+        m_zoom += -0.02f * zoom;
+        // std::cout << m_zoom << std::endl;
+    }
 
     void CloseGLFW()
     {
@@ -192,8 +199,14 @@ namespace WindowManager
         glfwSetFramebufferSizeCallback(m_window, framebuffer_size_callback);
         glfwSetWindowFocusCallback(m_window, window_focus_callback);
         glfwSetWindowUserPointer(m_window, reinterpret_cast<void *>(this));
+        glfwSetScrollCallback(m_window, mouse_scroll_callback);
 
         SetupCamera();
+
+        m_isoMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        m_isoMatrix = glm::scale(m_isoMatrix, glm::vec3(0.5f, 1.0f, 1.0f));
+        m_isoMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(-45.0f), glm::vec3(0, 1, 0));
+        m_invIsoMatrix = glm::inverse(m_isoMatrix);
 
         return true;
     }
@@ -211,97 +224,132 @@ namespace WindowManager
     void Window::Update()
     {
         CalculateDeltaTime();
+        glfwPollEvents();
         ProcessInput();
         Clear();
 
         m_shaderPtr->Use();
 
+        // Reset m_model to identity matrix
         m_model = glm::mat4(1.0f);
-        m_model = glm::scale(m_model, glm::vec3(0.5f, 1.0f, 1.0f));
 
-        m_currentTranslation += m_newTranslation;
-        std::cout << "X: " << m_currentTranslation.x << std::endl;
-        std::cout << "Z: " << m_currentTranslation.z << std::endl;
-        m_model = glm::translate(m_model, m_currentTranslation);
-        //m_model = glm::translate(m_model, (glm::vec3(-25.0f, 0.0f, -25.0f) * 5.0f)); // Confirmed good position
+        /////////////////// TRANSLATIONS ///////////////////////
+
+        // "Squish in half" for isometric POV
+        m_model = glm::scale(m_model, glm::vec3(0.5f, 1.0f, 1.0f));
+        // Setting the proper angle for isometric POV
         m_model = glm::rotate(m_model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
+        glm::vec4 worldOffset = m_model * glm::vec4(m_gridOffset, 1.0f);
+
+        m_model = glm::translate(m_model, m_gridOffset);
+
+            // Calculate tile value in integer
+        glm::ivec2 tile = glm::floor(glm::vec2(m_gridOffset.x, m_gridOffset.z) / 5.0f);
+            // Calculate exact tile value
+        glm::vec2 exactTile = glm::vec2(m_gridOffset.x, m_gridOffset.z) / 5.0f;
+
+        ////////////////////// CAMERA //////////////////////////
         if (m_camera)
         {
-            m_zoom = 0.08;
-            //m_projection = glm::perspective(glm::radians(45.0f), (float)m_winWidth / (float)m_winHeight, 0.1f, 1000.0f);
             m_projection = glm::ortho(
-                (-(m_winWidth / 2.0f) * m_zoom),
-                ((m_winWidth / 2.0f) * m_zoom),
-                ((m_winHeight / 2.0f) * m_zoom),
-                (-(m_winHeight / 2.0f) * m_zoom),
-                (200.0f * 5),
-                (-200.0f * 5)
+                (-(m_winWidth / 2.0f) * m_zoom), // LEFT
+                ((m_winWidth / 2.0f) * m_zoom), // RIGHT
+                ((m_winHeight / 2.0f) * m_zoom), // BOTTOM
+                (-(m_winHeight / 2.0f) * m_zoom), // TOP
+                (200.0f * 5), // ZNEAR
+                (-200.0f * 5) // ZFAR
                 );
+
             m_view = m_camera->GetViewMatrix();
+
         }
         else
         {
             std::cout << "Camera is NULL" << std::endl;
         }
 
+        ///////////// SHADERS AND DRAWING /////////////////////////
+        // Fills in data inside shaders for the grid
         SetShaderData(m_shaderPtr);
 
-        // vvv Draw calls vvv
+        // Draw calls
         glLineWidth(1.0f);
         DrawGridLines();
-            // UI/HUD
+
+        // UI/HUD
         glLineWidth(2.0f);
         m_uiShaderPtr->Use();
         DrawUI();
 
-        m_newTranslation = glm::vec3(0.0f);
+        //////////////////// ON FRAME ////////////////////////////
+        // Things to do every frame, not every tick
+        if ((glfwGetTime() - m_lastFrameTime) >= m_fixedDeltaTime)
+        {
+            glfwSwapBuffers(m_window);
 
-        glfwSwapBuffers(m_window);
-        glfwPollEvents();
+            m_lastFrameTime = glfwGetTime();
+
+            /* PRINT GRID COORDS UNSCALED
+            std::cout << "Grid coordinate: ("
+          << m_gridOffset.x << ", "
+          << m_gridOffset.z << ")" << std::endl;
+            */
+
+            /* Print Grid Coords Scaled and Floor
+            std::cout << "Grid coordinate: ("
+          << tile.x << ", "
+          << tile.y << ")" << std::endl;
+          */
+
+            /* Print Grid Coords Scaled with decimals
+            std::cout << "Grid coordinate: ("
+          << exactTile.x << ", "
+          << exactTile.y << ")" << std::endl;
+          */
+        }
+
     }
 
     void Window::onUpdate()
+    // PUBLIC function for calling update functions
     {
         Update();
     }
 
+    glm::vec3 Window::UnProject(glm::vec3 inVec3)
+    {
+        return glm::unProject(inVec3, m_view, m_projection, glm::vec4(0.0f, 0.0f, m_winWidth, m_winHeight));
+    }
+
+    glm::vec3 Window::Project(glm::vec3 inVec3)
+    {
+        return glm::project(inVec3, m_view, m_projection, glm::vec4(0.0f, 0.0f, m_winWidth, m_winHeight));
+    }
+
     void Window::CalculateDeltaTime()
     {
-        float currentFrame = glfwGetTime();
-        m_deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        double currentFrame = glfwGetTime();
+        m_deltaTime = currentFrame - m_lastUpdate;
+        m_lastUpdate = currentFrame;
+
     }
 
     void Window::ProcessInput()
     {
         if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS)
         {
-            if (m_camera)
-            {
-                m_camera->ProcessKeyboard(FORWARD, m_deltaTime);
-            }
         }
         if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS)
         {
-            if (m_camera)
-            {
-                m_camera->ProcessKeyboard(BACKWARD, m_deltaTime);
-            }
         }
         if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS)
         {
-            if (m_camera)
-            {
-                m_camera->ProcessKeyboard(LEFT, m_deltaTime);
-            }
+
         }
         if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS)
         {
-            if (m_camera)
-            {
-                m_camera->ProcessKeyboard(RIGHT, m_deltaTime);
-            }
+
         }
     }
 
@@ -339,9 +387,10 @@ namespace WindowManager
         return m_view;
     }
 
-    void Window::ReceiveGridData(std::vector<glm::vec3> m_gridLines)
+    void Window::ReceiveGridData(GridData m_gridData)
     {
-        m_gridData = m_gridLines;
+        m_gridLines = m_gridData.gridData;
+        m_singleTileSize = m_gridData.tileSize;
     }
 
     void Window::PrepareRendering()
@@ -352,7 +401,7 @@ namespace WindowManager
         glBindVertexArray(lineVAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, lineVBO);
-        glBufferData(GL_ARRAY_BUFFER, m_gridData.size() * sizeof(glm::vec3), m_gridData.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, m_gridLines.size() * sizeof(glm::vec3), m_gridLines.data(), GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
         glEnableVertexAttribArray(0);
@@ -375,7 +424,7 @@ namespace WindowManager
     {
         //std::cout << "drawing lines..." << std::endl;
         glBindVertexArray(lineVAO);
-        glDrawArrays(GL_LINES, 0, m_gridData.size());
+        glDrawArrays(GL_LINES, 0, m_gridLines.size());
         //glBindVertexArray(0);
     }
 
@@ -391,7 +440,6 @@ namespace WindowManager
         shader->setMat4("projection", GetProjectionMatrix());
         shader->setMat4("model", m_model);
         shader->setVec3("lineColor", glm::vec3(0.0f,0.0f,0.0f));
-
     }
 
     void Window::DestroyWindow()
