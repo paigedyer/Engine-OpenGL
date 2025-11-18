@@ -11,6 +11,7 @@ include_directories(
 		${GLFW3_INCLUDE_DIR}
 		${CMAKE_SOURCE_DIR}/lib/assimp/include
 		${CMAKE_SOURCE_DIR}/Engine
+		${CMAKE_SOURCE_DIR}/lib/imgui/includes
 )
 
 # Set the path for source file header files
@@ -31,6 +32,7 @@ add_library(engine
 		${ENGINE_SOURCE_PATH}/Model.cpp
 		${ENGINE_SOURCE_PATH}/Camera.cpp
 		${ENGINE_SOURCE_PATH}/WindowManager.cpp
+		${ENGINE_SOURCE_PATH}/InputManager.cpp
 )
 
 target_include_directories(glad PUBLIC
@@ -39,6 +41,28 @@ target_include_directories(glad PUBLIC
 
 target_include_directories(engine PUBLIC
 		${ENGINE_INCLUDES_DIR}
+)
+
+set(IMGUI_SOURCE_PATH lib/imgui/src)
+set(IMGUI_INCLUDES_DIR lib/imgui/includes)
+add_library(imgui STATIC
+		${IMGUI_SOURCE_PATH}/imgui.cpp
+		${IMGUI_SOURCE_PATH}/imgui_demo.cpp
+		${IMGUI_SOURCE_PATH}/imgui_draw.cpp
+		${IMGUI_SOURCE_PATH}/imgui_impl_glfw.cpp
+		${IMGUI_SOURCE_PATH}/imgui_impl_opengl3.cpp
+		${IMGUI_SOURCE_PATH}/imgui_tables.cpp
+		${IMGUI_SOURCE_PATH}/imgui_widgets.cpp
+)
+target_link_libraries(imgui
+	glad
+	${GLFW3_LIBRARY}
+)
+target_include_directories(imgui PUBLIC
+	${IMGUI_INCLUDES_DIR}
+)
+target_link_libraries(engine
+	imgui
 )
 
 # TILEMAP EDITOR TOOL EXE
@@ -50,10 +74,13 @@ target_link_libraries(TOOL_tilemap_editor
 		engine
 		glad
 		${GLFW3_LIBRARY}
-		OpenGL::GL)
+		OpenGL::GL
+		imgui
+)
 
 target_include_directories(TOOL_tilemap_editor PUBLIC
 		TilemapEditor/includes
+		${IMGUI_INCLUDES_DIR}
 )
 
 # GAME ENGINE EXE - DEGBUG, TESTING, ETC.
@@ -66,12 +93,15 @@ target_include_directories(GameEngine PRIVATE
 		${GLFW3_INCLUDE_DIR}
 		${ASSIMP_INCLUDE_DIRS}
 		${ENGINE_INCLUDES_DIR}
+		${IMGUI_INCLUDES_DIR}
 )
 
 target_link_libraries(GameEngine
 	engine
 	glad
+	imgui
 	assimp
 	${GLFW3_LIBRARY} 
 	OpenGL::GL
+
 )

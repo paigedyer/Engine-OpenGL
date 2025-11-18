@@ -7,6 +7,10 @@
 #define DEFAULT_NUM_COLS 50
 #define DEFAULT_NUM_ROWS 50
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <WindowManager.h>
 #include <SHADER.h>
 #include <glm/glm.hpp>
@@ -35,6 +39,14 @@ namespace TilemapEditor
             std::vector<glm::vec3> m_gridLines;
             WindowManager::Window::GridData m_gridData;
 
+
+        };
+    class Tile
+        {
+        public:
+            Tile();
+        private:
+            void InitializeTile();
 
         };
 }

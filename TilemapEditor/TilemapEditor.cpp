@@ -7,6 +7,8 @@
 
 namespace TilemapEditor
 {
+    GLFWwindow* currentWindow = nullptr;
+
     void OpenWindows()
     {
         if (WindowManager::Window::Init())
@@ -22,6 +24,7 @@ namespace TilemapEditor
             WindowManager::Window editorWindow(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, "Tilemap Editor");
 
             editorWindow.SetFocused();
+            currentWindow = editorWindow.GetWindow();
 
             // Send the generated grid data to the editor window
             editorWindow.ReceiveGridData(grid.GetGridData());
@@ -40,33 +43,6 @@ namespace TilemapEditor
                 }
             }
             if (editorWindow.IsClosed()) { WindowManager::CloseGLFW(); }
-
-            /* Render both palette window and editor window
-            while (!paletteWindow.IsClosed() || !editorWindow.IsClosed())
-            {
-                if (paletteWindow.ShouldClose()) { paletteWindow.DestroyWindow(); }
-                else
-                {
-                    // PALETTE WINDOW RENDER LOOP
-                    paletteWindow.onUpdate();
-
-                }
-                if (editorWindow.ShouldClose()) { editorWindow.DestroyWindow();}
-                else
-                {
-                    // EDITOR WINDOW RENDER LOOP
-
-                    if (editorWindow.IsCurrent())
-                    {
-                        editorWindow.onUpdate();
-                    }
-                }
-            }
-            if (paletteWindow.IsClosed() && editorWindow.IsClosed())
-            {
-                WindowManager::CloseGLFW();
-            }
-            */
         }
     }
 
@@ -108,6 +84,16 @@ namespace TilemapEditor
         m_gridData.numCols = m_numCols;
         m_gridData.numRows = m_numRows;
         return m_gridData;
+    }
+
+    Tile::Tile()
+    {
+        InitializeTile();
+    }
+
+    void Tile::InitializeTile()
+    {
+
     }
 
 }
