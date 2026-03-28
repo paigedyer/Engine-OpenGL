@@ -33,6 +33,7 @@ add_library(engine
 		${ENGINE_SOURCE_PATH}/Camera.cpp
 		${ENGINE_SOURCE_PATH}/WindowManager.cpp
 		${ENGINE_SOURCE_PATH}/InputManager.cpp
+		${ENGINE_SOURCE_PATH}/GridCoordinateManager.cpp
 )
 
 target_include_directories(glad PUBLIC

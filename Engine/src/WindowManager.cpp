@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 
 #include <WindowManager.h>
+#include <GridCoordinateManager.h>
 
 #include "Engine.h"
 
@@ -23,6 +24,7 @@ namespace WindowManager
     bool m_bMouseWheelPressed = false;
     Window* currentWindow;
     bool m_bUICaptureMouse = false;
+    bool m_bUICaptureKeyboard = false;
     bool firstMouse = true;
     float yaw = -90.0f;
     float pitch = 0.0f;
@@ -194,20 +196,14 @@ namespace WindowManager
 
         glfwMakeContextCurrent(m_window);
 
-        // Initialize IMGUI
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO(); (void)io;
-        m_io = &io;
-        ImGui::StyleColorsDark();
-        ImGui_ImplGlfw_InitForOpenGL(m_window, false);
-        ImGui_ImplOpenGL3_Init("#version 330");
-
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
             std::cout << "Failed to initialize GLAD" << std::endl;
             return false;
         }
+
+        // Initialize ImGUI
+        InitUI();
 
         glViewport(0, 0, m_winWidth, m_winHeight);
         glDisable(GL_DEPTH_TEST);
@@ -245,6 +241,21 @@ namespace WindowManager
             return false;
         }
         return true;
+    }
+
+        // Initialize ImGUI
+    void Window::InitUI()
+    {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGui::StyleColorsDark();
+        ImGui_ImplGlfw_InitForOpenGL(m_window, false);
+        ImGui_ImplOpenGL3_Init("#version 330");
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        m_io = &io;
+
+        uiElements = new UIElement();
+        uiElements->InitializeUIElements();
     }
 
         // Process Rendering data
@@ -352,20 +363,7 @@ namespace WindowManager
         return glm::project(inVec3, m_view, m_projection, glm::vec4(0.0f, 0.0f, m_winWidth, m_winHeight));
     }
 
-        // IMGUI UI COMMANDS
-    void Window::UICommands()
-    {
-        ImGui::Begin("Grid Information");
 
-        ImGui::SeparatorText("Grid Coordinates");
-        ImGui::PushItemWidth(80);
-        ImGui::SliderFloat("X", &m_gridx, 0.0f, 999.0); ImGui::SameLine();
-        ImGui::SliderFloat("Y", &m_gridy, 0.0f, 999.0);
-        ImGui::PopItemWidth();
-
-        ImGui::Text("Hello");
-        ImGui::End();
-    }
 
     ////////////////// UPDATE FUNCTIONS /////////////////////////
 
@@ -382,18 +380,19 @@ namespace WindowManager
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        if (m_io->WantCaptureMouse)
-        {
-            m_bUICaptureMouse = true;
-        }
-        else
-        {
-            m_bUICaptureMouse = false;
-        }
+            // If the UI is hovered
+        if (m_io->WantCaptureMouse) { m_bUICaptureMouse = true; }
+        else { m_bUICaptureMouse = false; }
+            // If the UI is waiting for keyboard input
+        if (m_io->WantCaptureKeyboard) { m_bUICaptureKeyboard = true; }
+        else { m_bUICaptureKeyboard = false; }
 
         ///////////// IMGUI COMMANDS ///////////////
-        UICommands();
-        ImGui::Render();
+        if (uiElements)
+        {
+            UICommands();
+            ImGui::Render();
+        }
 
         //////////// SHADER RENDERING //////////////
         m_shaderPtr->Use();
@@ -483,6 +482,13 @@ namespace WindowManager
 
     }
 
+        // IMGUI UI COMMANDS
+        // These are called on update.
+    void Window::UICommands()
+    {
+        uiElements->RunElements();
+        uiElements->GetGridPosFromWindow(m_gridx, m_gridy);
+    }
         // Public function called by the application
     void Window::onUpdate()
     // PUBLIC function for calling update functions
@@ -518,6 +524,11 @@ namespace WindowManager
         glBindVertexArray(lineVAO);
         glDrawArrays(GL_LINES, 0, m_gridLines.size());
         //glBindVertexArray(0);
+    }
+
+    void Window::UpdateGridTransformAfterInput(float newx, float newy)
+    {
+        //TransformScreen()
     }
 
         // This is just the crosshair, will probably change this eventually

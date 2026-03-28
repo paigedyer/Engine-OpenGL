@@ -12,6 +12,7 @@
 #include <vector>
 #include <SHADER.h>
 
+#include "GridCoordinateManager.h"
 #include <InputManager.h>
 
 #define DEFAULT_WINDOW_WIDTH 800
@@ -20,7 +21,6 @@
 
 namespace WindowManager
 {
-
     class Window
     {
     public:
@@ -48,6 +48,7 @@ namespace WindowManager
         //////////////// INITIALIZING FUNCTIONS ///////////////////////////
 
         static bool Init();
+        void InitUI();
         void PrepareRendering();
         void SetFramebufferValues(int width, int height);
 
@@ -83,7 +84,6 @@ namespace WindowManager
         unsigned int GetHeight();
         GLFWwindow* GetWindow();
 
-
     private:
 
         //////////////// INITIALIZING FUNCTIONS ///////////////////////////
@@ -106,6 +106,7 @@ namespace WindowManager
 
         void DrawGridLines();
         void DrawUI();
+        void UpdateGridTransformAfterInput(float newx, float newy);
 
         glm::vec3 m_lastScreenCoordinates = glm::vec3(0.0f);
         glm::vec3 m_currentCoords = glm::vec3(0.0f);
@@ -117,6 +118,7 @@ namespace WindowManager
 
         /// IMGUI ///
         ImGuiIO* m_io;
+        UIElement* uiElements;
 
         bool m_winIsClosed = false;
         bool m_firstFrame = true;
@@ -175,6 +177,7 @@ namespace WindowManager
         // Variables for working with IMGUI - TEMPORARY
         float m_gridx = 0.0f;
         float m_gridy = 0.0f;
+
     };
 
     ///////////////// SHUTDOWN FUNCTIONS //////////////////////////
